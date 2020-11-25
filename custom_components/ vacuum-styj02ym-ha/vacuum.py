@@ -451,9 +451,10 @@ class MiroboVacuum2(StateVacuumEntity):
     """Fetch state from the device."""
     try:
       state_values = self._vacuum.raw_command('get_prop', ALL_PROPS)
-      self.vacuum_state = dict(zip(ALL_PROPS, state_values))
+      state = dict(zip(ALL_PROPS, state_values))
+      self.vacuum_state = dict()
       for prop in VACUUM_CARD_PROPS_REFERENCES.keys():
-          self.vacuum_state[prop] = self.vacuum_state[VACUUM_CARD_PROPS_REFERENCES[prop]]
+          self.vacuum_state[prop] = state[VACUUM_CARD_PROPS_REFERENCES[prop]]
 
       # No funciona
       #self.vacuum_state = dict()
