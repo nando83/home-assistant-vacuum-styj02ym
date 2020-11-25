@@ -120,18 +120,83 @@ STATE_CODE_TO_STATE = {
     7: STATE_CLEANING   # Mop only
 }
 
-ALL_PROPS = ["run_state", "mode", "err_state", "battary_life", "box_type", "mop_type", "s_time",
-             "s_area", "suction_grade", "water_grade", "remember_map", "has_map", "is_mop", "has_newmap",
-             "side_brush_life", "side_brush_hours", "main_brush_life", "main_brush_hours", "hypa_life", "hypa_hours", "mop_life", "mop_hours", "water_percent","hw_info", "sw_info", "start_time", "order_time", "v_state", "zone_data", "repeat_state", "light_state", "is_charge", "is_work", "cur_mapid", "mop_route", "map_num"]
-
+ALL_PROPS = [
+    "run_state",
+    "mode",
+    "err_state",
+    "battary_life",
+    "box_type",
+    "mop_type",
+    "s_time",
+    "s_area",
+    "suction_grade",
+    "water_grade",
+    "remember_map",
+    "has_map",
+    "is_mop",
+    "has_newmap",
+    "side_brush_life",
+    "side_brush_hours",
+    "main_brush_life",
+    "main_brush_hours",
+    "hypa_life",
+    "hypa_hours",
+    "mop_life",
+    "mop_hours",
+    "water_percent",
+    "hw_info",
+    "sw_info",
+    "start_time",
+    "order_time",
+    "v_state",
+    "zone_data",
+    "repeat_state",
+    "light_state",
+    "is_charge",
+    "is_work",
+    "cur_mapid",
+    "mop_route",
+    "map_num"
+]
+    
 VACUUM_CARD_PROPS_REFERENCES = {
+    'state': 'err_state',
+    'mode': 'mode',
+    'state_code': 'run_state',
+    'battery': 'battary_life',
+    'box_type': 'box_type',
+    'mop_type': 'mop_type',
+    'fanspeed': 'suction_grade',
+    'water_grade': 'water_grade',
+    'remember_map': 'remember_map',
+    'has_map': 'has_map',
+    'is_mop': 'is_mop',
+    'has_newmap': 'has_newmap',
+    'main_brush_life': 'main_brush_life',
     'main_brush_left': 'main_brush_hours',
+    'side_brush_life': 'side_brush_life',
     'side_brush_left': 'side_brush_hours',
+    'hypa_life': 'hypa_life',
     'filter_left': 'hypa_hours',
+    'mop_life': 'mop_life',
+    'water_percent': 'water_percent',
+    'hw_info': 'hw_info', 
+    'sw_info': 'sw_info', 
+    'start_time': 'start_time', 
+    'order_time': 'order_time', 
+    'v_state': 'v_state', 
+    'zone_data': 'zone_data', 
+    'repeat_state': 'repeat_state', 
+    'light_state': 'light_state', 
+    'is_charge': 'is_charge', 
+    'is_work': 'is_work', 
+    'cur_mapid': 'cur_mapid', 
+    'mop_route': 'mop_route', 
+    'map_num': 'map_num',
     'sensor_dirty_left': 'mop_hours',
     'cleaned_area': 's_area',
-    'cleaning_time': 's_time'}
-
+    'cleaning_time': 's_time'
+}
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
   """Set up the Xiaomi vacuum cleaner robot platform."""
