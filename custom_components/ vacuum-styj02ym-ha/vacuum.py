@@ -25,7 +25,6 @@ from homeassistant.components.vacuum import (
     SUPPORT_START,
     SUPPORT_STATE,
     SUPPORT_STOP,
-    StateVacuumDevice,
     StateVacuumEntity,
 )
 from homeassistant.const import (
@@ -160,12 +159,14 @@ ALL_PROPS = [
 ]
     
 VACUUM_CARD_PROPS_REFERENCES = {
-    'state': 'err_state',
-    'mode': 'mode',
     'state_code': 'run_state',
+    'mode': 'mode',
+    'state': 'err_state',
     'battery': 'battary_life',
     'box_type': 'box_type',
     'mop_type': 'mop_type',
+    'cleaned_area': 's_area',
+    'cleaning_time': 's_time',
     'fanspeed': 'suction_grade',
     'water_grade': 'water_grade',
     'remember_map': 'remember_map',
@@ -179,6 +180,7 @@ VACUUM_CARD_PROPS_REFERENCES = {
     'hypa_life': 'hypa_life',
     'filter_left': 'hypa_hours',
     'mop_life': 'mop_life',
+    'sensor_dirty_left': 'mop_hours',
     'water_percent': 'water_percent',
     'hw_info': 'hw_info', 
     'sw_info': 'sw_info', 
@@ -192,10 +194,7 @@ VACUUM_CARD_PROPS_REFERENCES = {
     'is_work': 'is_work', 
     'cur_mapid': 'cur_mapid', 
     'mop_route': 'mop_route', 
-    'map_num': 'map_num',
-    'sensor_dirty_left': 'mop_hours',
-    'cleaned_area': 's_area',
-    'cleaning_time': 's_time'
+    'map_num': 'map_num'
 }
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
@@ -258,14 +257,18 @@ class MiroboVacuum2(StateVacuumEntity):
     self._name = name
     self._vacuum = vacuum
 
-    self._last_clean_point = None
-
     self.vacuum_state = None
     self._available = False
-    #self.consumable_state = None
-    #self.clean_history = None
-    #self.dnd_state = None
-    #self.last_clean = None
+
+    self.last_clean_point = None
+    self.consumable_state = None
+    self.clean_history = None
+    self.dnd_state = None
+    self.last_clean = None
+    self._fan_speeds = None
+    self._fan_speeds_reverse = None
+
+    self._timers = None
 
   @property
   def name(self):
@@ -280,11 +283,11 @@ class MiroboVacuum2(StateVacuumEntity):
       # We want to keep returning an error until it has been cleared.
 
       try:
-        return STATE_CODE_TO_STATE[int(self.vacuum_state['run_state'])]
+        return STATE_CODE_TO_STATE[int(self.vacuum_state['state_code'])]
       except KeyError:
         _LOGGER.error(
             "STATE not supported, state_code: %s",
-            self.vacuum_state['run_state'],
+            self.vacuum_state['state_code'],
         )
         return None
 
@@ -292,13 +295,13 @@ class MiroboVacuum2(StateVacuumEntity):
   def battery_level(self):
     """Return the battery level of the vacuum cleaner."""
     if self.vacuum_state is not None:
-      return self.vacuum_state['battary_life']
+      return self.vacuum_state['battery']
 
   @property
   def fan_speed(self):
     """Return the fan speed of the vacuum cleaner."""
     if self.vacuum_state is not None:
-      speed = self.vacuum_state['suction_grade']
+      speed = self.vacuum_state['fanspeed']
       if speed in FAN_SPEEDS.values():
         return [key for key, value in FAN_SPEEDS.items() if value == speed][0]
       return speed
@@ -315,9 +318,9 @@ class MiroboVacuum2(StateVacuumEntity):
     if self.vacuum_state is not None:
       attrs.update(self.vacuum_state)
       try:
-        attrs['status'] = STATE_CODE_TO_STATE[int(self.vacuum_state['run_state'])]
+        attrs['status'] = STATE_CODE_TO_STATE[int(self.vacuum_state['state_code'])]
       except KeyError:
-        return "Definition missing for state %s" % self.vacuum_state['run_state']
+        return "Definition missing for state %s" % self.vacuum_state['state_code']
     return attrs
 
   @property
@@ -346,9 +349,9 @@ class MiroboVacuum2(StateVacuumEntity):
     is_mop = self.vacuum_state['is_mop']
     actionMode = 0
 
-    if mode == 4 and self._last_clean_point is not None:
+    if mode == 4 and self.last_clean_point is not None:
       method = 'set_pointclean'
-      param = [1, self._last_clean_point[0], self._last_clean_point[1]]
+      param = [1, self.last_clean_point[0], self.last_clean_point[1]]
     else:
       if mode == 2:
         actionMode = 2
@@ -371,9 +374,9 @@ class MiroboVacuum2(StateVacuumEntity):
     is_mop = self.vacuum_state['is_mop']
     actionMode = 0
 
-    if mode == 4 and self._last_clean_point is not None:
+    if mode == 4 and self.last_clean_point is not None:
       method = 'set_pointclean'
-      param = [3, self._last_clean_point[0], self._last_clean_point[1]]
+      param = [3, self.last_clean_point[0], self.last_clean_point[1]]
     else:
       if mode == 2:
         actionMode = 2
@@ -399,7 +402,7 @@ class MiroboVacuum2(StateVacuumEntity):
     elif mode == 4:
       method = 'set_pointclean'
       param = [0, 0, 0]
-      self._last_clean_point = None
+      self.last_clean_point = None
     else:
       method = 'set_mode'
       param = [0]
@@ -447,12 +450,21 @@ class MiroboVacuum2(StateVacuumEntity):
   def update(self):
     """Fetch state from the device."""
     try:
-      state = self._vacuum.raw_command('get_prop', ALL_PROPS)
-
-      self.vacuum_state = dict(zip(ALL_PROPS, state))
-
+      state_values = self._vacuum.raw_command('get_prop', ALL_PROPS)
+      state = dict(zip(ALL_PROPS, state_values))
+      self.vacuum_state = dict()
       for prop in VACUUM_CARD_PROPS_REFERENCES.keys():
-                self.vacuum_state[prop] = self.vacuum_state[VACUUM_CARD_PROPS_REFERENCES[prop]]
+          self.vacuum_state[prop] = state[VACUUM_CARD_PROPS_REFERENCES[prop]]
+
+      # No funciona
+      #self.vacuum_state = dict()
+      #for ref, prop in VACUUM_CARD_PROPS_REFERENCES.items():
+      #   self.vacuum_state[ref] = self._vacuum.raw_command('get_prop', [prop])
+
+      # No funciona
+      #for prop in VACUUM_CARD_PROPS_REFERENCES.keys():
+      #    self.vacuum_state[prop] = self._vacuum.raw_command('get_prop', [VACUUM_CARD_PROPS_REFERENCES[prop]])
+
 
       self._available = True
       
@@ -493,6 +505,6 @@ class MiroboVacuum2(StateVacuumEntity):
   async def async_clean_point(self, point):
     """Clean selected area"""
     x, y = point
-    self._last_clean_point = point
+    self.last_clean_point = point
     await self._try_command("Unable to clean point: %s", self._vacuum.raw_command, 'set_uploadmap', [0]) \
         and await self._try_command("Unable to clean point: %s", self._vacuum.raw_command, 'set_pointclean', [1, x, y])
