@@ -258,7 +258,7 @@ class MiroboVacuum2(StateVacuumEntity):
     self._name = name
     self._vacuum = vacuum
 
-    self._last_clean_point = None
+    self.last_clean_point = None
 
     self.vacuum_state = None
     self._available = False
@@ -346,9 +346,9 @@ class MiroboVacuum2(StateVacuumEntity):
     is_mop = self.vacuum_state['is_mop']
     actionMode = 0
 
-    if mode == 4 and self._last_clean_point is not None:
+    if mode == 4 and self.last_clean_point is not None:
       method = 'set_pointclean'
-      param = [1, self._last_clean_point[0], self._last_clean_point[1]]
+      param = [1, self.last_clean_point[0], self.last_clean_point[1]]
     else:
       if mode == 2:
         actionMode = 2
@@ -371,9 +371,9 @@ class MiroboVacuum2(StateVacuumEntity):
     is_mop = self.vacuum_state['is_mop']
     actionMode = 0
 
-    if mode == 4 and self._last_clean_point is not None:
+    if mode == 4 and self.last_clean_point is not None:
       method = 'set_pointclean'
-      param = [3, self._last_clean_point[0], self._last_clean_point[1]]
+      param = [3, self.last_clean_point[0], self.last_clean_point[1]]
     else:
       if mode == 2:
         actionMode = 2
@@ -399,7 +399,7 @@ class MiroboVacuum2(StateVacuumEntity):
     elif mode == 4:
       method = 'set_pointclean'
       param = [0, 0, 0]
-      self._last_clean_point = None
+      self.last_clean_point = None
     else:
       method = 'set_mode'
       param = [0]
@@ -493,6 +493,6 @@ class MiroboVacuum2(StateVacuumEntity):
   async def async_clean_point(self, point):
     """Clean selected area"""
     x, y = point
-    self._last_clean_point = point
+    self.last_clean_point = point
     await self._try_command("Unable to clean point: %s", self._vacuum.raw_command, 'set_uploadmap', [0]) \
         and await self._try_command("Unable to clean point: %s", self._vacuum.raw_command, 'set_pointclean', [1, x, y])
