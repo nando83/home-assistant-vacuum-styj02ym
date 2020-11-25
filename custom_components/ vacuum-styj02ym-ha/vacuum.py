@@ -250,8 +250,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         DOMAIN, vacuum_service, async_service_handler, schema=schema
     )
 
-
-#class MiroboVacuum2(StateVacuumDevice):
 class MiroboVacuum2(StateVacuumEntity):
   """Representation of a Xiaomi Vacuum cleaner robot."""
 
@@ -260,10 +258,14 @@ class MiroboVacuum2(StateVacuumEntity):
     self._name = name
     self._vacuum = vacuum
 
-    self._last_clean_point = None
+    self.last_clean_point = None
 
     self.vacuum_state = None
     self._available = False
+    self.consumable_state = None
+    self.clean_history = None
+    self.dnd_state = None
+    self.last_clean = None
 
   @property
   def name(self):
@@ -278,11 +280,11 @@ class MiroboVacuum2(StateVacuumEntity):
       # We want to keep returning an error until it has been cleared.
 
       try:
-        return STATE_CODE_TO_STATE[int(self.vacuum_state['run_state'])]
+        return STATE_CODE_TO_STATE[int(self.vacuum_state.state_code)]
       except KeyError:
         _LOGGER.error(
             "STATE not supported, state_code: %s",
-            self.vacuum_state['run_state'],
+            self.vacuum_state.state_code,
         )
         return None
 
@@ -290,13 +292,13 @@ class MiroboVacuum2(StateVacuumEntity):
   def battery_level(self):
     """Return the battery level of the vacuum cleaner."""
     if self.vacuum_state is not None:
-      return self.vacuum_state['battary_life']
+      return self.vacuum_state.battery
 
   @property
   def fan_speed(self):
     """Return the fan speed of the vacuum cleaner."""
     if self.vacuum_state is not None:
-      speed = self.vacuum_state['suction_grade']
+      speed = self.vacuum_state.fanspeed
       if speed in FAN_SPEEDS.values():
         return [key for key, value in FAN_SPEEDS.items() if value == speed][0]
       return speed
@@ -313,9 +315,9 @@ class MiroboVacuum2(StateVacuumEntity):
     if self.vacuum_state is not None:
       attrs.update(self.vacuum_state)
       try:
-        attrs['status'] = STATE_CODE_TO_STATE[int(self.vacuum_state['run_state'])]
+        attrs['status'] = STATE_CODE_TO_STATE[int(self.vacuum_state.state_code)]
       except KeyError:
-        return "Definition missing for state %s" % self.vacuum_state['run_state']
+        return "Definition missing for state %s" % self.vacuum_state.state_code
     return attrs
 
   @property
@@ -340,13 +342,13 @@ class MiroboVacuum2(StateVacuumEntity):
 
   async def async_start(self):
     """Start or resume the cleaning task."""
-    mode = self.vacuum_state['mode']
-    is_mop = self.vacuum_state['is_mop']
+    mode = self.vacuum_state.mode
+    is_mop = self.vacuum_state.is_mop
     actionMode = 0
 
-    if mode == 4 and self._last_clean_point is not None:
+    if mode == 4 and self.last_clean_point is not None:
       method = 'set_pointclean'
-      param = [1, self._last_clean_point[0], self._last_clean_point[1]]
+      param = [1, self.last_clean_point[0], self.last_clean_point[1]]
     else:
       if mode == 2:
         actionMode = 2
@@ -361,17 +363,19 @@ class MiroboVacuum2(StateVacuumEntity):
       else:
         method = 'set_mode_withroom'
         param = [actionMode, 1, 0]
-    await self._try_command("Unable to start the vacuum: %s", self._vacuum.raw_command, method, param)
+    await self._try_command
+        "Unable to start the vacuum: %s", self._vacuum.raw_command, method, param
+    )
 
   async def async_pause(self):
     """Pause the cleaning task."""
-    mode = self.vacuum_state['mode']
-    is_mop = self.vacuum_state['is_mop']
+    mode = self.vacuum_state.mode
+    is_mop = self.vacuum_state.is_mop
     actionMode = 0
 
-    if mode == 4 and self._last_clean_point is not None:
+    if mode == 4 and self.last_clean_point is not None:
       method = 'set_pointclean'
-      param = [3, self._last_clean_point[0], self._last_clean_point[1]]
+      param = [3, self.last_clean_point[0], self.last_clean_point[1]]
     else:
       if mode == 2:
         actionMode = 2
@@ -386,22 +390,28 @@ class MiroboVacuum2(StateVacuumEntity):
       else:
         method = 'set_mode_withroom'
         param = [actionMode, 3, 0]
-    await self._try_command("Unable to set pause: %s", self._vacuum.raw_command, method, param)
+    await self._try_command(
+        "Unable to set pause: %s", self._vacuum.raw_command, method, param
+    )
 
   async def async_stop(self, **kwargs):
     """Stop the vacuum cleaner."""
-    mode = self.vacuum_state['mode']
+    mode = self.vacuum_state.mode
     if mode == 3:
       method = 'set_mode'
       param = [3, 0]
     elif mode == 4:
       method = 'set_pointclean'
       param = [0, 0, 0]
-      self._last_clean_point = None
+      self.last_clean_point = None
     else:
       method = 'set_mode'
       param = [0]
-    await self._try_command("Unable to stop: %s", self._vacuum.raw_command, method, param)
+    await self._try_command(
+        "Unable to stop: %s", self._vacuum.raw_command, 
+        method, 
+        param
+    )
 
   async def async_set_fan_speed(self, fan_speed, **kwargs):
     """Set fan speed."""
@@ -418,17 +428,26 @@ class MiroboVacuum2(StateVacuumEntity):
         )
         return
     await self._try_command(
-        "Unable to set fan speed: %s", self._vacuum.raw_command, 'set_suction', [
-            fan_speed]
+        "Unable to set fan speed: %s", self._vacuum.raw_command, 
+        'set_suction', 
+        [fan_speed]
     )
 
   async def async_return_to_base(self, **kwargs):
     """Set the vacuum cleaner to return to the dock."""
-    await self._try_command("Unable to return home: %s", self._vacuum.raw_command, 'set_charge', [1])
+    await self._try_command(
+        "Unable to return home: %s", self._vacuum.raw_command, 
+        'set_charge', 
+        [1]
+    )
 
   async def async_locate(self, **kwargs):
     """Locate the vacuum cleaner."""
-    await self._try_command("Unable to locate the botvac: %s", self._vacuum.raw_command, 'set_resetpos', [1])
+    await self._try_command(
+        "Unable to locate the botvac: %s", self._vacuum.raw_command, 
+        'set_resetpos', 
+        [1]
+    )
 
   async def async_send_command(self, command, params=None, **kwargs):
     """Send raw command."""
@@ -436,7 +455,7 @@ class MiroboVacuum2(StateVacuumEntity):
         "Unable to send command to the vacuum: %s",
         self._vacuum.raw_command,
         command,
-        params,
+        params
     )
 
   def update(self):
@@ -452,8 +471,8 @@ class MiroboVacuum2(StateVacuumEntity):
       self._available = True
       
       # Automatically set mop based on mop_type
-      is_mop = bool(self.vacuum_state['is_mop'])
-      has_mop = bool(self.vacuum_state['mop_type'])
+      is_mop = bool(self.vacuum_state.is_mop)
+      has_mop = bool(self.vacuum_state.mop_type)
 
       update_mop = None
       if is_mop and not has_mop:
@@ -481,13 +500,32 @@ class MiroboVacuum2(StateVacuumEntity):
         i += 1
     result = [i] + result
 
-    await self._try_command("Unable to clean zone: %s", self._vacuum.raw_command, 'set_uploadmap', [1]) \
-        and await self._try_command("Unable to clean zone: %s", self._vacuum.raw_command, 'set_zone', result) \
-        and await self._try_command("Unable to clean zone: %s", self._vacuum.raw_command, 'set_mode', [3, 1])
+    await self._try_command("Unable to clean zone: %s", self._vacuum.raw_command, 
+        'set_uploadmap', 
+        [1]
+    ) \
+        and await self._try_command(
+            "Unable to clean zone: %s", self._vacuum.raw_command, 
+            'set_zone',
+             result
+        ) \
+        and await self._try_command(
+            "Unable to clean zone: %s", self._vacuum.raw_command, 
+            'set_mode', 
+            [3, 1]
+        )
 
   async def async_clean_point(self, point):
     """Clean selected area"""
     x, y = point
-    self._last_clean_point = point
-    await self._try_command("Unable to clean point: %s", self._vacuum.raw_command, 'set_uploadmap', [0]) \
-        and await self._try_command("Unable to clean point: %s", self._vacuum.raw_command, 'set_pointclean', [1, x, y])
+    self.last_clean_point = point
+    await self._try_command(
+        "Unable to clean point: %s", self._vacuum.raw_command, 
+        'set_uploadmap', 
+        [0]
+    ) \
+        and await self._try_command(
+            "Unable to clean point: %s", self._vacuum.raw_command, 
+            'set_pointclean', 
+            [1, x, y]
+        )
