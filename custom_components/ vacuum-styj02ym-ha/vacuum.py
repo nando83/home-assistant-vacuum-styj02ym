@@ -451,8 +451,8 @@ class MiroboVacuum2(StateVacuumEntity):
 
       self.vacuum_state = dict(zip(ALL_PROPS, state))
 
-      for prop in VACUUM_CARD_PROPS_REFERENCES.keys():
-                self.vacuum_state[prop] = self.vacuum_state[VACUUM_CARD_PROPS_REFERENCES[prop]]
+      for ref, prop in VACUUM_CARD_PROPS_REFERENCES.items():
+                self.vacuum_state[prop] = self.vacuum_state[VACUUM_CARD_PROPS_REFERENCES[ref]]
 
       self._available = True
       
