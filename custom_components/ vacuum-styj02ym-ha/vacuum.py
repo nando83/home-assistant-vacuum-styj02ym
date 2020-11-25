@@ -120,9 +120,9 @@ STATE_CODE_TO_STATE = {
 }
    
 VACUUM_CARD_PROPS_REFERENCES = {
-    'state': 'err_state',
-    'mode': 'mode',
     'state_code': 'run_state',
+    'mode': 'mode',
+    'state': 'err_state',
     'battery': 'battary_life',
     'box_type': 'box_type',
     'mop_type': 'mop_type',
@@ -411,20 +411,21 @@ class MiroboVacuum2(StateVacuumEntity):
   def update(self):
     """Fetch state from the device."""
     try:
-      state_values = self._vacuum.raw_command('get_prop', list(VACUUM_CARD_PROPS_REFERENCES.values()))
+      ALL_PROPS = list(VACUUM_CARD_PROPS_REFERENCES.values())
+      state_values = self._vacuum.raw_command('get_prop', ALL_PROPS)
       state = dict(zip(ALL_PROPS, state_values))
       self.vacuum_state = dict()
       for prop in VACUUM_CARD_PROPS_REFERENCES.keys():
           self.vacuum_state[prop] = state[VACUUM_CARD_PROPS_REFERENCES[prop]]
 
       # No funciona
-      # self.vacuum_state = dict()
+      #self.vacuum_state = dict()
       #for ref, prop in VACUUM_CARD_PROPS_REFERENCES.items():
       #   self.vacuum_state[ref] = self._vacuum.raw_command('get_prop', [prop])
 
       # No funciona
-      # for prop in VACUUM_CARD_PROPS_REFERENCES.keys():
-      #     self.vacuum_state[prop] = self._vacuum.raw_command('get_prop', list(VACUUM_CARD_PROPS_REFERENCES[prop]))
+      #for prop in VACUUM_CARD_PROPS_REFERENCES.keys():
+      #    self.vacuum_state[prop] = self._vacuum.raw_command('get_prop', [VACUUM_CARD_PROPS_REFERENCES[prop]])
 
 
       self._available = True
