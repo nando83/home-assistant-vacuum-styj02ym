@@ -118,46 +118,7 @@ STATE_CODE_TO_STATE = {
     6: STATE_CLEANING,  # Vacuum & Mop
     7: STATE_CLEANING   # Mop only
 }
-
-ALL_PROPS = [
-    "run_state",
-    "mode",
-    "err_state",
-    "battary_life",
-    "box_type",
-    "mop_type",
-    "s_time",
-    "s_area",
-    "suction_grade",
-    "water_grade",
-    "remember_map",
-    "has_map",
-    "is_mop",
-    "has_newmap",
-    "side_brush_life",
-    "side_brush_hours",
-    "main_brush_life",
-    "main_brush_hours",
-    "hypa_life",
-    "hypa_hours",
-    "mop_life",
-    "mop_hours",
-    "water_percent",
-    "hw_info",
-    "sw_info",
-    "start_time",
-    "order_time",
-    "v_state",
-    "zone_data",
-    "repeat_state",
-    "light_state",
-    "is_charge",
-    "is_work",
-    "cur_mapid",
-    "mop_route",
-    "map_num"
-]
-    
+   
 VACUUM_CARD_PROPS_REFERENCES = {
     'state_code': 'run_state',
     'mode': 'mode',
@@ -450,20 +411,20 @@ class MiroboVacuum2(StateVacuumEntity):
   def update(self):
     """Fetch state from the device."""
     try:
-      state_values = self._vacuum.raw_command('get_prop', ALL_PROPS)
+      state_values = self._vacuum.raw_command('get_prop', list(VACUUM_CARD_PROPS_REFERENCES.values()))
       state = dict(zip(ALL_PROPS, state_values))
       self.vacuum_state = dict()
       for prop in VACUUM_CARD_PROPS_REFERENCES.keys():
           self.vacuum_state[prop] = state[VACUUM_CARD_PROPS_REFERENCES[prop]]
 
       # No funciona
-      #self.vacuum_state = dict()
+      # self.vacuum_state = dict()
       #for ref, prop in VACUUM_CARD_PROPS_REFERENCES.items():
       #   self.vacuum_state[ref] = self._vacuum.raw_command('get_prop', [prop])
 
       # No funciona
-      #for prop in VACUUM_CARD_PROPS_REFERENCES.keys():
-      #    self.vacuum_state[prop] = self._vacuum.raw_command('get_prop', [VACUUM_CARD_PROPS_REFERENCES[prop]])
+      # for prop in VACUUM_CARD_PROPS_REFERENCES.keys():
+      #     self.vacuum_state[prop] = self._vacuum.raw_command('get_prop', list(VACUUM_CARD_PROPS_REFERENCES[prop]))
 
 
       self._available = True
