@@ -25,7 +25,6 @@ from homeassistant.components.vacuum import (
     SUPPORT_START,
     SUPPORT_STATE,
     SUPPORT_STOP,
-    StateVacuumDevice,
     StateVacuumEntity,
 )
 from homeassistant.const import (
