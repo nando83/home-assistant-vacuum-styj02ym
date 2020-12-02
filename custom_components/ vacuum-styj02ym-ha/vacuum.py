@@ -434,19 +434,17 @@ class MiroboVacuum2(StateVacuumEntity):
 
 			self._available = True
 
-			# Automatically set mop based on mop_type
-			is_mop = bool(self.vacuum_state['is_mop'])
-			has_mop = bool(self.vacuum_state['mop_type'])
+			# Automatically set mop based on box_type
+			is_mop = int(self.vacuum_state['is_mop'])
+			box_type = int(self.vacuum_state['box_type'])
 
 			update_mop = None
-			if is_mop and not has_mop:
-				  
-									  
-				  
-									  
-				update_mop = 0
-			elif not is_mop and has_mop:
+			if box_type == 2 and is_mop != 2:
+				update_mop = 2
+			elif box_type == 3 and is_mop != 1:
 				update_mop = 1
+			elif box_type == 1 and is_mop != 0:
+				update_mop = 0
 
 			if update_mop is not None:
 				self._vacuum.raw_command('set_mop', [update_mop])
