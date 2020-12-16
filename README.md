@@ -13,12 +13,12 @@ Old HACS:
 ![](demo_hacs.gif)
 
 ## Manual Install:
-- Create the following folder structure: /config/custom_components/vacuum-styj02ym-ha and place all files there [4 files](https://github.com/nqkdev/home-assistant-vacuum-styj02ym) there.
+- Create the following folder structure: /config/custom_components/miio2 and place all files there [4 files](https://github.com/nando83/home-assistant-vacuum-styj02ym) there.
 - Add the configuration to configuration.yaml, example:
 
 ```yaml
 vacuum:
-  - platform: vacuum-styj02ym-ha
+  - platform: miio2
     host: 192.168.68.105
     token: !secret vacuum
     name: Mi hihi

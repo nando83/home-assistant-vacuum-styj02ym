@@ -40,7 +40,7 @@ import homeassistant.helpers.config_validation as cv
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_NAME = "Xiaomi Vacuum cleaner STYJ02YM"
-DATA_KEY = "vacuum.vacuum-styj02ym-ha"
+DATA_KEY = "vacuum.miio2"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 	{

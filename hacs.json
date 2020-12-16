@@ -6,5 +6,5 @@
     "homeassistant": "0.109.0",
     "iot_class": "local_poll",
     "zip_release": true,
-    "filename": "vacuum-styj02ym-ha.zip"
+    "filename": "miio2.zip"
 }
