@@ -1,9 +1,8 @@
 {
     "name": "Xiaomi Vacuum 2 Mop Pro (styj02ym)",
-    "render_readme": true,
-    "country": ["FR", "PL", "ES"],
     "domains": ["vacuum"],
-    "iot_class": "local_poll",
+    "homeassistant": "0.116.0",
+    "iot_class": ["Local Push"],
     "zip_release": true,
     "filename": "vacuum-styj02ym-ha.zip"
 }
