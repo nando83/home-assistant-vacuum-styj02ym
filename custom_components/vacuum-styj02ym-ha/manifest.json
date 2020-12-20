@@ -9,8 +9,7 @@
   "dependencies": [],
   "codeowners": [
     "@weslleycsil", "@nando83"
-  ]
-},
+  ],
   "issue_tracker": "https://github.com/nando83/vacuum-styj02ym-ha/issues",
   "requirements": [],
   "config_flow": true
