@@ -25,6 +25,7 @@ from homeassistant.components.vacuum import (
 	SUPPORT_START,
 	SUPPORT_STATE,
 	SUPPORT_STOP,
+	# StateVacuumDevice,
 	StateVacuumEntity,
 )
 from homeassistant.const import (
@@ -155,7 +156,7 @@ VACUUM_CARD_PROPS_REFERENCES = {
 	'is_work': 'is_work', 
 	'cur_mapid': 'cur_mapid', 
 	'mop_route': 'mop_route', 
-	'map_num': 'map_num'
+	'map_num': 'map_num',
 }
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
@@ -176,34 +177,34 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
 	async_add_entities([mirobo], update_before_add=True)
 
-	async def async_service_handler(service):
-		"""Map services to methods on MiroboVacuum."""
-		method = SERVICE_TO_METHOD.get(service.service)
-		params = {
-			key: value for key,
-			value in service.data.items() if key != ATTR_ENTITY_ID
-		}
-		entity_ids = service.data.get(ATTR_ENTITY_ID)
+async def async_service_handler(service):
+	"""Map services to methods on MiroboVacuum."""
+	method = SERVICE_TO_METHOD.get(service.service)
+	params = {
+		key: value for key,
+		value in service.data.items() if key != ATTR_ENTITY_ID
+	}
+	entity_ids = service.data.get(ATTR_ENTITY_ID)
 
-		if entity_ids:
-			target_vacuums = [
-				vac
-				for vac in hass.data[DATA_KEY].values()
-				if vac.entity_id in entity_ids
-			]
-		else:
-			target_vacuums = hass.data[DATA_KEY].values()
+	if entity_ids:
+		target_vacuums = [
+			vac
+			for vac in hass.data[DATA_KEY].values()
+			if vac.entity_id in entity_ids
+		]
+	else:
+		target_vacuums = hass.data[DATA_KEY].values()
 
-		update_tasks = []
-		for vacuum in target_vacuums:
-			await getattr(vacuum, method["method"])(**params)
+	update_tasks = []
+	for vacuum in target_vacuums:
+		await getattr(vacuum, method["method"])(**params)
 
-		for vacuum in target_vacuums:
-			update_coro = vacuum.async_update_ha_state(True)
-			update_tasks.append(update_coro)
+	for vacuum in target_vacuums:
+		update_coro = vacuum.async_update_ha_state(True)
+		update_tasks.append(update_coro)
 
-		if update_tasks:
-			await asyncio.wait(update_tasks)
+	if update_tasks:
+		await asyncio.wait(update_tasks)
 
 	for vacuum_service in SERVICE_TO_METHOD:
 		schema = SERVICE_TO_METHOD[vacuum_service].get(
@@ -219,9 +220,7 @@ class MiroboVacuum2(StateVacuumEntity):
 	def __init__(self, name, vacuum):
 		"""Initialize the Xiaomi vacuum cleaner robot handler."""
 		self._name = name
-		self._vacuum = vacuum
-
-							   
+		self._vacuum = vacuum							   
 
 		self.vacuum_state = None
 		self._available = False
@@ -434,19 +433,53 @@ class MiroboVacuum2(StateVacuumEntity):
 
 			self._available = True
 
-      	# Automatically set mop based on mop_type
-      	is_mop = bool(self.vacuum_state['is_mop'])
-      	has_mop = bool(self.vacuum_state['mop_type'])
+      	### Automatically set mop based on box_type
+		##	is_mop = int(self.vacuum_state['is_mop'])
+		##	box_type = int(self.vacuum_state['box_type'])
+		##
+		##	update_mop = None
+		##	if box_type == 2 and is_mop != 2:
+		##		update_mop = 2
+		##	elif box_type == 3 and is_mop != 1:
+		##		update_mop = 1
+		##	elif box_type == 1 and is_mop != 0:
+		##		update_mop = 0
+		##
+		##	if update_mop is not None:
+		##		self._vacuum.raw_command('set_mop', [update_mop])
+		##		self.update()
+      	
+		# Current state of the vacuum
+        # 2: mop only, 1: dust&mop, 0: only vacuum
+        current_mode = int(self.vacuum_state['is_mop'])
+        # 3: 2 in 1, 2: water only, 1: dust only, 0: no box
+        box_type = int(self.vacuum_state['box_type'])
+		# True: has the mop attachment, False: no attachment
+        has_mop = bool(self.vacuum_state['mop_type'])
+		
+		# Automatically set mop based on box_type
+		new_mode = None
 
-      	update_mop = None
-      	if is_mop and not has_mop:
-        	update_mop = 0
-      	elif not is_mop and has_mop:
-        	update_mop = 1
+		if box_type == 3:
+			# 2 in 1 box
+			if has_mop:
+				# Vacuum and mop if we have the attachment
+				new_mode = 1
+			else:
+				# Just vacuum if we have no mop
+				new_mode = 0
+		elif box_type == 2:
+			# We only have water, so let's mop.
+			# (Vacuum will error out if we have no mop attachment)
+			new_mode = 2
+		elif box_type == 1:
+			# We only have dust box, mopping not possible
+			new_mode = 0
 
-      	if update_mop is not None:
-        	self._vacuum.raw_command('set_mop', [update_mop])
-        	self.update()
+		if new_mode is not None and new_mode != current_mode:
+			self._vacuum.raw_command('set_mop', [new_mode])
+			self.update()
+
 	except OSError as exc:
 		_LOGGER.error("Got OSError while fetching the state: %s", exc)
 	except DeviceException as exc:
